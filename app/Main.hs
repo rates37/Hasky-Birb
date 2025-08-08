@@ -83,6 +83,19 @@ render gs@GameState {..} =
       translate 0 birdY $ color red $ circleSolid 20
     ]
 
+{-
+Equivalent non haskelly code:
+def drawClouds(time: float) -> [Picture]:
+    clouds = [(1.0, 200, 150, 40), ... ]
+
+    def drawCloud(cloudData: tuple[speed: float, x: float, y: float, r: float]) -> picture:
+        # makes a single cloud
+        w = float(windowWidth)
+        xPos = x - ((time * 40 * speed) % (w+r*2))
+        return translate(xPos, y, color(makeColor(1,1,1,1), circleSolid(r)))
+
+    return pictures(list(map(drawCloud, clouds)))
+-}
 drawClouds :: Float -> Picture
 drawClouds t = pictures $ map drawCloud clouds
   where
