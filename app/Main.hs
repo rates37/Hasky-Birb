@@ -26,14 +26,14 @@ windowHeight :: Int
 windowHeight = 600
 
 gravity :: Float
-gravity = -400
+gravity = -550
 
 jumpVel :: Float
 jumpVel = 200
 
 -- Gloss Stuff:
 window :: Display
-window = InWindow "Flopy brid" (windowWidth, windowHeight) (10, 10)
+window = InWindow "Hasky Birb" (windowWidth, windowHeight) (10, 10)
 
 background :: Color
 background = makeColor 0.48 0.78 0.93 1.0
@@ -45,11 +45,12 @@ fps = 60
 data GameState = GameState
   { birdY :: Float,
     birdVel :: Float,
-    gameTime :: Float
+    gameTime :: Float,
+    gameStatus :: GameStatus
   }
   deriving (Show)
 
-data GameStatus = Playing | GameOver deriving (Eq, Show)
+data GameStatus = Playing | GameOver | Menu deriving (Eq, Show)
 
 -- * Pipe (represented as x position and y gap position)
 
@@ -59,7 +60,8 @@ initialState =
   GameState
     { birdY = 0,
       birdVel = 0,
-      gameTime = 0
+      gameTime = 0,
+      gameStatus = Menu
     }
 
 -- Update function(s)
@@ -80,7 +82,23 @@ render :: GameState -> Picture
 render gs@GameState {..} =
   pictures
     [ drawClouds gameTime,
+      case gameStatus of
+        Playing -> renderGame gs
+        _ -> renderMenu
+    ]
+
+renderGame :: GameState -> Picture
+renderGame gs@GameState {..} =
+  pictures
+    [ drawClouds gameTime,
       translate 0 birdY $ color red $ circleSolid 20
+    ]
+
+renderMenu :: Picture
+renderMenu =
+  pictures
+    [ drawTextWithShadow "Hasky birb" (-100, 50) 0.3,
+      drawTextWithShadow "Press space to begin" (-100, -20) 0.15
     ]
 
 {-
@@ -119,3 +137,10 @@ handleInput _ gs = gs
 -- Misc functions:
 clamp :: (Ord a) => a -> a -> a -> a
 clamp lo hi val = max lo (min val hi)
+
+drawTextWithShadow :: String -> (Float, Float) -> Float -> Picture
+drawTextWithShadow str (x, y) s =
+  pictures
+    [ translate (x + 2) (y - 2) $ scale s s $ color (makeColor 0 0 0 0.5) $ text str, -- this is the shadow
+      translate x y $ scale s s $ color white $ text str -- White text
+    ]
