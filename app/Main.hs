@@ -190,6 +190,20 @@ drawTextWithShadow str (x, y) s =
       translate x y $ scale s s $ color white $ text str -- White text
     ]
 
+{-
+def updatePipes(dt: float, ps: List[Pipe]) -> [Pipe]:
+    n = len(ps)
+    thresholdToBeOffscreen = -float(windowWidth) / 2 - pipeWidth / 2
+
+    def recycle_and_move_pipe(pipe: Pipe):
+    x,y, scored = pipe
+    newX = x - pipeSpeed * dt
+    if newX < thresholdToBeOffscreen:
+        ny = random.uniform(-160, 160)
+        return (recycledPx, newY, False)
+    else:
+        return (nx, y, score)
+-}
 updatePipes :: Float -> StdGen -> [Pipe] -> (StdGen, [Pipe])
 updatePipes dt g ps = mapAccumL recycleAndMovePipe g ps
   where
@@ -202,6 +216,15 @@ updatePipes dt g ps = mapAccumL recycleAndMovePipe g ps
                in (newGen, (recycledPx, newGapY, False))
             else (gen, (newPx, gy, scored))
 
+{- 
+Non haskelly code:
+
+def initialPipes() -> list[Pipe]:
+    initialXPositions = [250 + (i*pipeSpacing)+250 for i in range(3)]
+
+    return [
+    (x, random.choice(lo=-160, hi=160), False) for x in initialXpositions]
+-}
 initialPipes :: StdGen -> [Pipe]
 initialPipes g = snd $ mapAccumL generateNextPipe g [250, 250 + pipeSpacing, 250 + 2 * pipeSpacing]
   where
@@ -209,6 +232,22 @@ initialPipes g = snd $ mapAccumL generateNextPipe g [250, 250 + pipeSpacing, 250
       let (gapY, newGen) = randomR (-160, 160) gen
        in (newGen, (x, gapY, False))
 
+{- 
+def drawPipe(pipe: Pipe) -> Picture:
+    x,y,_ = pipe
+
+    pipeColor = makeCOlor(0.4, 0.8, 0.4, 1)
+    pipeBody = color(pipeColor, rectangleSolid (pipeWidth, float(windowHeight)))
+
+    topPipeY = ...
+    topPipeX = ...
+
+    topPipePic = translate(x, topPipeY, pipeBody)
+    bottomPipePic = translate(x, bottomPipeY, pipeBody)
+
+    return pictures([topPipePic, bottomPipePic])
+
+-}
 drawPipe :: Pipe -> Picture
 drawPipe (px, gy, _) =
   pictures
