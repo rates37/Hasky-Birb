@@ -18,7 +18,7 @@ main = do
     handleInput
     update
 
--- Game constants:
+-- ! Game constants:
 windowWidth :: Int
 windowWidth = 400
 
@@ -41,7 +41,7 @@ background = makeColor 0.48 0.78 0.93 1.0
 fps :: Int
 fps = 60
 
--- Data Types:
+-- ! Data Types:
 data GameState = GameState
   { birdY :: Float,
     birdVel :: Float,
@@ -64,7 +64,7 @@ initialState =
       gameStatus = Menu
     }
 
--- Update function(s)
+-- ! Update function(s)
 update :: Float -> GameState -> GameState
 -- state update method
 update dt gs =
@@ -77,7 +77,7 @@ update dt gs =
     newBirdVel = birdVel gs + gravity * dt
     newBirdY = birdY gs + newBirdVel * dt
 
--- Render function(s):
+-- ! Render function(s):
 render :: GameState -> Picture
 render gs@GameState {..} =
   pictures
@@ -129,10 +129,28 @@ drawClouds t = pictures $ map drawCloud clouds
           xPos = x - (mod' (t * 40 * speed) (w + r * 2))
        in translate xPos y $ color (makeColor 1 1 1 1) $ circleSolid r
 
+
+-- ! Event handling:
 handleInput :: Event -> GameState -> GameState
 -- handle whether in playing or gameover mode
-handleInput (EventKey (SpecialKey KeySpace) Down _ _) gs = gs {birdVel = jumpVel}
-handleInput _ gs = gs
+-- handleInput (EventKey (SpecialKey KeySpace) Down _ _) gs = gs {birdVel = jumpVel}
+handleInput event gs@GameState {..} = 
+    case gameStatus of
+        Menu -> handleMenuInput event gs
+        Playing -> handlePlayingInput event gs
+        GameOver -> handleGameOverInput event gs
+
+handleMenuInput :: Event -> GameState -> GameState
+handleMenuInput (EventKey (SpecialKey KeySpace) Down _ _) gs = gs {gameStatus = Playing, birdVel = jumpVel}
+handleMenuInput _ gs = gs
+
+handlePlayingInput :: Event -> GameState -> GameState
+handlePlayingInput (EventKey (SpecialKey KeySpace) Down _ _) gs = gs {birdVel = jumpVel}
+handlePlayingInput _ gs = gs
+
+handleGameOverInput :: Event -> GameState -> GameState
+handleGameOverInput (EventKey (Char 'r') Down _ _) gs@GameState {..} = initialState
+handleGameOverInput _ gs = gs
 
 -- Misc functions:
 clamp :: (Ord a) => a -> a -> a -> a
