@@ -62,7 +62,8 @@ data GameState = GameState
     gameTime :: Float,
     gameStatus :: GameStatus,
     pipes :: [Pipe],
-    rng :: StdGen
+    rng :: StdGen,
+    score :: Int
   }
   deriving (Show)
 
@@ -77,9 +78,10 @@ initialState g =
     { birdY = 0,
       birdVel = 0,
       gameTime = 0,
-      gameStatus = Menu,
+      gameStatus = GameOver,
       pipes = initialPipes g,
-      rng = g
+      rng = g,
+      score = 0
     }
 
 -- ! Update function(s)
@@ -110,6 +112,8 @@ render gs@GameState {..} =
     [ drawClouds gameTime,
       case gameStatus of
         Playing -> renderGame gs
+        Menu -> renderMenu
+        GameOver -> renderGameOver score
         _ -> renderMenu
     ]
 
@@ -125,6 +129,17 @@ renderMenu =
   pictures
     [ drawTextWithShadow "Hasky birb" (-100, 50) 0.3,
       drawTextWithShadow "Press space to begin" (-100, -20) 0.15
+    ]
+
+renderGameOver :: Int -> Picture
+renderGameOver finalScore =
+  pictures
+    [ -- Put dark tint on game:
+      color (makeColor 0 0 0 0.5) $ rectangleSolid (fromIntegral windowWidth) (fromIntegral windowHeight),
+      -- Show score:
+      drawTextWithShadow "Game Over" (-100, 50) 0.3,
+      drawTextWithShadow ("Score: " ++ (show finalScore)) (-80, 0) 0.2,
+      drawTextWithShadow "Press 'R' to restart" (-110, -50) 0.2
     ]
 
 {-
@@ -216,7 +231,7 @@ updatePipes dt g ps = mapAccumL recycleAndMovePipe g ps
                in (newGen, (recycledPx, newGapY, False))
             else (gen, (newPx, gy, scored))
 
-{- 
+{-
 Non haskelly code:
 
 def initialPipes() -> list[Pipe]:
@@ -232,7 +247,7 @@ initialPipes g = snd $ mapAccumL generateNextPipe g [250, 250 + pipeSpacing, 250
       let (gapY, newGen) = randomR (-160, 160) gen
        in (newGen, (x, gapY, False))
 
-{- 
+{-
 def drawPipe(pipe: Pipe) -> Picture:
     x,y,_ = pipe
 
