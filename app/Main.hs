@@ -28,10 +28,10 @@ windowHeight :: Int
 windowHeight = 600
 
 gravity :: Float
-gravity = -550
+gravity = -850
 
 jumpVel :: Float
-jumpVel = 200
+jumpVel = 350
 
 pipeSpeed :: Float
 pipeSpeed = 100
