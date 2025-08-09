@@ -116,8 +116,7 @@ render gs@GameState {..} =
       case gameStatus of
         Playing -> renderGame gs
         Menu -> renderMenu
-        GameOver -> renderGameOver score
-        _ -> renderMenu
+        GameOver -> pictures [renderGame gs, renderGameOver score]
     ]
 
 renderGame :: GameState -> Picture
