@@ -55,6 +55,9 @@ pipeWidth = 70.0
 pipeGap :: Float
 pipeGap = 160.0
 
+birdX :: Float
+birdX = -60.0
+
 -- ! Data Types:
 data GameState = GameState
   { birdY :: Float,
@@ -78,7 +81,7 @@ initialState g =
     { birdY = 0,
       birdVel = 0,
       gameTime = 0,
-      gameStatus = GameOver,
+      gameStatus = Menu,
       pipes = initialPipes g,
       rng = g,
       score = 0
@@ -121,7 +124,7 @@ renderGame :: GameState -> Picture
 renderGame gs@GameState {..} =
   pictures
     [ pictures (map drawPipe pipes),
-      translate 0 birdY $ color red $ circleSolid 20
+      translate 0 birdY $ drawBird birdVel gameTime
     ]
 
 renderMenu :: Picture
@@ -169,6 +172,20 @@ drawClouds t = pictures $ map drawCloud clouds
       let w = fromIntegral windowWidth
           xPos = x - (mod' (t * 40 * speed) (w + r * 2))
        in translate xPos y $ color (makeColor 1 1 1 1) $ circleSolid r
+
+drawBird :: Float -> Float -> Picture
+drawBird v t =
+  rotate birdRotation $
+    pictures
+      [ color (makeColor 1.0 0.84 0.0 1.0) $ circleSolid 20, -- body
+        translate 7 5 $ color white $ circleSolid 5, -- eye ball
+        translate 7 5 $ color black $ circleSolid 2, -- eye pupil
+        translate 22 (0 - 5) $ color red $ circleSolid 5, -- beak
+        translate (-5) wingY $ rotate (-20) $ color (makeColor 0.9 0.7 0 1) $ rectangleSolid 10 15 -- wing
+      ]
+  where
+    birdRotation = clamp (-45) 30 (v / 4)
+    wingY = 10 * sin (t * 20)
 
 -- ! Event handling:
 handleInput :: Event -> GameState -> GameState
