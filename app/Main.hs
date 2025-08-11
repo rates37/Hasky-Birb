@@ -33,8 +33,11 @@ gravity = -850
 jumpVel :: Float
 jumpVel = 350
 
-pipeSpeed :: Float
-pipeSpeed = 100
+initialScrollSpeed :: Float
+initialScrollSpeed = 200
+
+speedUpFactor :: Float
+speedUpFactor = 3
 
 -- Gloss Stuff:
 window :: Display
@@ -57,6 +60,9 @@ pipeGap = 160.0
 
 birdX :: Float
 birdX = -60.0
+
+birdRadius :: Float
+birdRadius = 20.0
 
 -- ! Data Types:
 data GameState = GameState
@@ -96,17 +102,69 @@ update dt gs@GameState {..} =
 
 updatePlaying :: Float -> GameState -> GameState
 updatePlaying dt gs@GameState {..} =
-  let (newRng, updatedPipes) = updatePipes dt rng pipes
+  let currentScrollSpeed = initialScrollSpeed + fromIntegral score * speedUpFactor
+      newVel = birdVel + gravity * dt
+      newY = birdY + newVel * dt
+
+      -- Check collision before updating pipes
+      collidedEarly = checkCollision gs {birdY = newY}
+
+      movedPipes = map (\(x, y, p) -> (x - currentScrollSpeed * dt, y, p)) pipes
+      (scoredPipes, newScore) = updateScore gs {pipes = movedPipes}
+      filteredPipes = filter (\(x, _, _) -> x > -fromIntegral windowWidth / 2 - pipeWidth) scoredPipes
+      (finalPipes, newGen) = addNewPipes rng filteredPipes currentScrollSpeed
+
+      collided = collidedEarly || checkCollision gs {birdY = newY, pipes = finalPipes}
+      newStatus = if collided then GameOver else Playing
    in gs
-        { birdY = newBirdY,
-          birdVel = newBirdVel,
-          gameTime = gameTime + dt,
-          pipes = updatedPipes,
-          rng = newRng
+        { birdY = newY,
+          birdVel = newVel,
+          pipes = finalPipes,
+          rng = newGen,
+          score = newScore,
+          gameStatus = newStatus,
+          gameTime = gameTime + dt
         }
+
+updateScore :: GameState -> ([Pipe], Int)
+updateScore GameState {..} = (newPipes, newScore)
   where
-    newBirdVel = birdVel + gravity * dt
-    newBirdY = birdY + newBirdVel * dt
+    (newPipes, scoreToAdd) = foldr f ([], 0) pipes
+    newScore = score + scoreToAdd
+    f pipe@(px, py, passed) (accPipes, accScore)
+      | not passed && px < birdX = ((px, py, True) : accPipes, accScore + 1)
+      | otherwise = (pipe : accPipes, accScore)
+
+addNewPipes :: StdGen -> [Pipe] -> Float -> ([Pipe], StdGen)
+addNewPipes gen ps currentSpeed =
+  if shouldAddPipe then (ps ++ [newPipe], newGen) else (ps, gen)
+  where
+    lastPipeX = case ps of
+      [] -> 0
+      _ -> let (x, _, _) = last ps in x
+    shouldAddPipe = lastPipeX < (fromIntegral windowWidth / 2 - pipeSpacing + currentSpeed * dt)
+    (newGapY, newGen) = randomR (-160.0, 160.0) gen
+    newPipe = (lastPipeX + pipeSpacing, newGapY, False)
+    dt = 1 / 60
+
+checkCollision :: GameState -> Bool
+checkCollision GameState {..} = groundCollision || ceilingCollision || pipeCollision
+  where
+    halfWindowH = fromIntegral windowHeight / 2
+    birdTop = birdY + birdRadius
+    birdBottom = birdY - birdRadius
+    groundCollision = birdBottom < -halfWindowH
+    ceilingCollision = birdTop > halfWindowH
+    pipeCollision = any (isCollidingWithPipe birdY) pipes
+
+isCollidingWithPipe :: Float -> Pipe -> Bool
+isCollidingWithPipe y (px, gapY, _) =
+  let birdRad = birdRadius
+      pipeHalfGap = pipeGap / 2
+      pipeTop = gapY + pipeHalfGap
+      pipeBottom = gapY - pipeHalfGap
+   in (birdX + birdRad > px - pipeWidth / 2 && birdX - birdRad < px + pipeWidth / 2)
+        && (y + birdRad > pipeTop || y - birdRad < pipeBottom)
 
 -- ! Render function(s):
 render :: GameState -> Picture
@@ -120,10 +178,11 @@ render gs@GameState {..} =
     ]
 
 renderGame :: GameState -> Picture
-renderGame gs@GameState {..} =
+renderGame GameState {..} =
   pictures
     [ pictures (map drawPipe pipes),
-      translate 0 birdY $ drawBird birdVel gameTime
+      translate 0 birdY $ drawBird birdVel gameTime,
+      drawTextWithShadow (show score) (0, fromIntegral windowHeight / 2 - 80) 0.4
     ]
 
 renderMenu :: Picture
@@ -206,7 +265,7 @@ handlePlayingInput _ gs = gs
 
 handleGameOverInput :: Event -> GameState -> GameState
 handleGameOverInput (EventKey (Char 'r') Down _ _) gs =
-  let (newGen, _) = split (rng gs)
+  let (newGen, _) = splitGen (rng gs)
    in initialState newGen
 handleGameOverInput _ gs = gs
 
@@ -222,34 +281,6 @@ drawTextWithShadow str (x, y) s =
     ]
 
 {-
-def updatePipes(dt: float, ps: List[Pipe]) -> [Pipe]:
-    n = len(ps)
-    thresholdToBeOffscreen = -float(windowWidth) / 2 - pipeWidth / 2
-
-    def recycle_and_move_pipe(pipe: Pipe):
-    x,y, scored = pipe
-    newX = x - pipeSpeed * dt
-    if newX < thresholdToBeOffscreen:
-        ny = random.uniform(-160, 160)
-        return (recycledPx, newY, False)
-    else:
-        return (nx, y, score)
--}
-updatePipes :: Float -> StdGen -> [Pipe] -> (StdGen, [Pipe])
-updatePipes dt g ps = mapAccumL recycleAndMovePipe g ps
-  where
-    recycleAndMovePipe gen (px, gy, scored) =
-      let newPx = px - pipeSpeed * dt
-       in if newPx < -fromIntegral windowWidth / 2 - pipeWidth / 2
-            then
-              let (newGapY, newGen) = randomR (-160, 160) gen
-                  recycledPx = newPx + fromIntegral (length ps) * pipeSpacing
-               in (newGen, (recycledPx, newGapY, False))
-            else (gen, (newPx, gy, scored))
-
-{-
-Non haskelly code:
-
 def initialPipes() -> list[Pipe]:
     initialXPositions = [250 + (i*pipeSpacing)+250 for i in range(3)]
 
