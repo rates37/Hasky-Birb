@@ -181,7 +181,7 @@ renderGame :: GameState -> Picture
 renderGame GameState {..} =
   pictures
     [ pictures (map drawPipe pipes),
-      translate 0 birdY $ drawBird birdVel gameTime,
+      translate birdX birdY $ drawBird birdVel gameTime,
       drawTextWithShadow (show score) (0, fromIntegral windowHeight / 2 - 80) 0.4
     ]
 
